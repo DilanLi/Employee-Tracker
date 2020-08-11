@@ -133,26 +133,33 @@ function createEmployeeinDatabase(response){
   console.log("   New employee created! \n");
   let roleId;
   connection.query(
-    "SELECT * FROM role WHERE title = " + response.role, 
-    function(err, res) {
+    // "SELECT * FROM role",
+    "SELECT * FROM role WHERE title =" + response.role,
+    function(err, res) { 
       if (err) throw err;
-      console.log(res)
-      roleId = res.id
-    });
-  connection.query(
-    "INSERT INTO employee SET ?",
-    {
-      first_name: response.first_name,
-      last_name: response.last_name,
-      role_id: roleId,
-      manager: response.manager
-    },
-    function(err, res) {
-      if (err) throw err;
-      console.log(res.affectedRows + " New employee created!\n");
-      init();
-    }
-  );
+      // for (i=0; i<res.length; i++){
+      //   if (response.role === res[i].title) {
+      //     roleId = res[i].id;
+      //   }
+      // }
+      roleId = res.id;
+      connection.query(
+        "INSERT INTO employee SET ?",
+        {
+          first_name: response.first_name,
+          last_name: response.last_name,
+          // role: response.role,
+          role_id: roleId,
+          manager: response.manager
+        },
+        function(err, res) {
+          if (err) throw err;
+          console.log(res.affectedRows + " New employee created!\n");
+          init();
+        }
+      );
+    
+    })
 }
 
 function updateEmployeeRole(){
