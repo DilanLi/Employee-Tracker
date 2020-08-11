@@ -19,10 +19,20 @@ var connection = mysql.createConnection({
 
 connection.connect(function(err) {
   if (err) throw err;
-  console.log("connected as id " + connection.threadId + "\n");
   init();
 });
 
+//all roles are retrieved from the database, and then stored to the roles array
+const roles = [];
+connection.query("SELECT title FROM role", function(err, res) {
+  if (err) throw err;
+  // console.log(res)
+  for (i=0; i<res.length; i++){
+    roles.push(res[i].title);
+  }
+});
+
+//this function asks what the user would like to do and initiates the other functions
 function init() {
   inquirer
   .prompt([
@@ -30,7 +40,7 @@ function init() {
       type: "list",
       message: "Welcome to the employee Tracker, what would you like to do?",
       name: "startMenu",
-      choices: ["View employees", "Add an employee", "Update an employee", "Exit"]
+      choices: ["View employees", "Add an employee", "Update employee role", "Exit"]
       }
   ])
   .then( response => {
@@ -41,14 +51,12 @@ function init() {
       case "Add an employee":
           addEmployee();
           break;
-      case "Update an employee":
+      case "Update employee role":
           updateEmployee();
           break;
       case "Exit":
           console.log("Thank you for using the Employee Tracker, have a great day.");
           connection.end();
-          //necessary?
-          return;
       }
     });
   }
@@ -57,20 +65,21 @@ function displayEmployees(){
   connection.query("SELECT * FROM employee", function(err, res) {
     if (err) throw err;
     // console.log(res);
-    let displayInfo = [];
+    let employeeInfo = [];
     for (i = 0; i < res.length; i++){
-       displayInfo.push({
+       employeeInfo.push({
          name: res[i].first_name + " " + res[i].last_name,
-         role: res[i].role_id,
-         manager: res[i].manager_id
+         role: res[i].role,
+         manager: res[i].manager
        })
     }
-    console.table(displayInfo);
+    console.table(employeeInfo);
     init();
   });
 }
 
 function addEmployee(){
+  // console.log(roles)
     inquirer
     .prompt([
         {
@@ -84,14 +93,16 @@ function addEmployee(){
         message: "What is the Employee's last name?"
     },
     {
-        type: "number",
-        name: "role_id",
-        message: "What is the Employee's role id?"
+        type: "list",
+        name: "role",
+        message: "What is the Employee's role?",
+        //roles are retrieved from the roles array
+        choices: roles
     },
     {
-        type: "number",
-        name: "manager_id",
-        message: "What is the Employee's manager id?"
+        type: "input",
+        name: "manager",
+        message: "Who is the Employee's manager?"
     }
     ]).then( response => {
         createEmployeeinDatabase(response);
@@ -100,14 +111,14 @@ function addEmployee(){
 }
 
 function createEmployeeinDatabase(response){
-  console.log("Inserting a new employee...\n");
-  var query = connection.query(
+  console.log("   New employee created! \n");
+  connection.query(
     "INSERT INTO employee SET ?",
     {
       first_name: response.first_name,
       last_name: response.last_name,
-      role_id: response.role_id,
-      manager_id: response.manager_id
+      role: response.role,
+      manager: response.manager
     },
     function(err, res) {
       if (err) throw err;
@@ -116,7 +127,39 @@ function createEmployeeinDatabase(response){
   );
 }
 
-function updateEmployee(){
+// function updateEmployee(){
+//   const employees = [];
+//   const role_id = [];
+//     inquirer
+//     .prompt([
+//         {
+//         type: "list",
+//         name: "selectedEmployee",
+//         message: "Which employee would you like to update?",
+//         choices: employees
+//         },
+//         {
+//         type: "list",
+//         name: "newRole",
+//         message: "What is the new role for this employee?",
+//         choices: roles
+//         }
+//     ]).then( response => {
+//       console.log("success")
+//         // connection.query(
+//         //   "UPDATE employee SET ? WHERE?", 
+//         //   [
+//         //     {
+//         //       role_id: 
+//         //     },
+//         //     {
+//         //       name: selectedEmployee
+//         //     }
+//         //   ],
+//         //   function(err, res) {
 
-}
+//         // })
+//       });  
+
+// }
 
