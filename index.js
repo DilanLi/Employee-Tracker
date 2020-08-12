@@ -41,10 +41,25 @@ connection.query("SELECT first_name, last_name FROM employee", function(err, res
   }
 });
 
-//construct an object of employee info from database
-// class Employee {
-//   constructor
-// }
+//Here I use a class constructor to matach all role titles with their IDs
+connection.query("SELECT * FROM role", function(err, res){
+  // console.log(res);
+  if (err) throw err;
+  class RoleAndID {
+    constructor(role, id) {
+      this.role = role;
+      this.id = id;
+    };
+  }
+  let roleAndIDArray = [];
+    for (i = 0; i < res.length; i++ ){
+      roleAndIDArray.push(JSON.stringify(new RoleAndID(res[i].title, res[i].id)))
+    }
+    console.log("Array: " + roleAndIDArray);
+    console.log(typeof roleAndIDArray);
+})
+
+
 
 //this function asks what the user would like to do and initiates the other functions
 function init() {
@@ -130,31 +145,23 @@ function addEmployee(){
 }
 
 function createEmployeeinDatabase(response){
-  console.log("   New employee created! \n");
   let roleId;
   connection.query(
-    // "SELECT * FROM role",
-    "SELECT * FROM role WHERE title =" + response.role,
+    "SELECT id FROM role WHERE title = ?", response.role,
     function(err, res) { 
       if (err) throw err;
-      // for (i=0; i<res.length; i++){
-      //   if (response.role === res[i].title) {
-      //     roleId = res[i].id;
-      //   }
-      // }
-      roleId = res.id;
+      roleId = res[0].id;
       connection.query(
         "INSERT INTO employee SET ?",
         {
           first_name: response.first_name,
           last_name: response.last_name,
-          // role: response.role,
           role_id: roleId,
           manager: response.manager
         },
         function(err, res) {
           if (err) throw err;
-          console.log(res.affectedRows + " New employee created!\n");
+          console.log(" New employee created!\n");
           init();
         }
       );
@@ -179,6 +186,13 @@ function updateEmployeeRole(){
         }
     ]).then( response => {
       employeeNameArray = response.selectedEmployee.split(" ");
+      let employeeID;
+      connection.query("SELECT * FROM employee", function(err, res){
+        for (i =0; i < res.length; i++){
+          if (employeeNameArray[0] === res[i].first_name && employeeNameArray[1] === res[i].last_name){
+            employeeID = res[i].id;
+          }
+        }
         connection.query(
           "UPDATE employee SET ? WHERE ?", 
           [
@@ -186,7 +200,7 @@ function updateEmployeeRole(){
               role: response.newRole
             },
             {
-              last_name: employeeNameArray[1]
+              id: employeeID
             }
           ],
           function(err, res) {
@@ -194,6 +208,8 @@ function updateEmployeeRole(){
             console.log("  Employee role updated! \n");
             init();      
         })
+      })
+
       });  
 
 }
