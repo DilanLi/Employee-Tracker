@@ -42,6 +42,7 @@ connection.query("SELECT first_name, last_name FROM employee", function(err, res
 });
 
 //Here I use a class constructor to matach all role titles with their IDs
+let roleAndIDArray = [];
 connection.query("SELECT * FROM role", function(err, res){
   // console.log(res);
   if (err) throw err;
@@ -51,11 +52,10 @@ connection.query("SELECT * FROM role", function(err, res){
       this.id = id;
     };
   }
-  let roleAndIDArray = [];
     for (i = 0; i < res.length; i++ ){
       roleAndIDArray.push(JSON.stringify(new RoleAndID(res[i].title, res[i].id)))
     }
-    console.log("Array: " + roleAndIDArray);
+    // console.log("Array: " + roleAndIDArray);
     // console.log(Array.isArray(roleAndIDArray));
     return roleAndIDArray;
 })
@@ -86,11 +86,20 @@ function init() {
       case "Update employee role":
           updateEmployeeRole();
           break;
+      case "Delete employee":
+          deleteEmployee();
+          break;
       case "Add Department":
           addDepartment();
           break;
+      case "Delete Department":
+          deleteDepartment();
+          break;
       case "Add Role":
           addRole();
+          break;
+      case "Delete Role":
+          deleteRole();
           break;
       case "Exit":
           console.log("Thank you for using the Employee Tracker, have a great day.");
@@ -218,8 +227,28 @@ function updateEmployeeRole(){
       })
 
       });  
-
 }
+
+function deleteEmployee(){
+  inquirer
+  .prompt([
+    {
+      type: "list",
+      name: "employeeToBeDeleted",
+      message: "Which employee would you like to delete?",
+      choices: employees
+    }
+  ])
+  connection.query(
+    "SELECT * FROM employee",
+    function(err, res) { 
+      if (err) throw err;
+      
+          init();
+        }
+      );
+    
+    }
 
 function addDepartment(){
   inquirer
@@ -242,6 +271,10 @@ function addDepartment(){
   })
 }
 
+function deleteDepartment(){
+
+}
+
 function addRole(){
   inquirer
   .prompt([
@@ -261,4 +294,8 @@ function addRole(){
       init();
     })
   })
+}
+
+function deleteRole(){
+
 }
