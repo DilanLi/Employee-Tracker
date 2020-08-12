@@ -56,8 +56,11 @@ connection.query("SELECT * FROM role", function(err, res){
       roleAndIDArray.push(JSON.stringify(new RoleAndID(res[i].title, res[i].id)))
     }
     console.log("Array: " + roleAndIDArray);
-    console.log(typeof roleAndIDArray);
+    // console.log(Array.isArray(roleAndIDArray));
+    return roleAndIDArray;
 })
+
+console.log(roleAndIDArray)
 
 
 
@@ -193,6 +196,10 @@ function updateEmployeeRole(){
             employeeID = res[i].id;
           }
         }
+        // let roleAndIdPairs = roleAndIDArray.filter(function(){
+        //   this.title === response.newRole;
+        // })
+        // console.log(roleAndIdPairs);
         connection.query(
           "UPDATE employee SET ? WHERE ?", 
           [
