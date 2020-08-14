@@ -74,7 +74,7 @@ function init() {
         type: "list",
         message: "Welcome to the employee Tracker, what would you like to do?",
         name: "startMenu",
-        choices: ["View All employees", "Add an employee", "Delete employee", "Update employee role", "Add Department", "Delete Department", "Add Role", "Delete Role", "Exit"]
+        choices: ["View All employees", "Add an employee", "Delete employee", "Update employee role", "Add Department", "Delete Department", "View All Departments", "Add Role", "Delete Role", "View All Roles", "Exit"]
       }
     ])
     .then(response => {
@@ -97,12 +97,17 @@ function init() {
         case "Delete Department":
           deleteDepartment();
           break;
+        case "View All Departments":
+          viewDepartments();
+          break;
         case "Add Role":
           addRole();
           break;
         case "Delete Role":
           deleteRole();
           break;
+        case "View All Roles":
+          viewRoles();
         case "Exit":
           console.log("Thank you for using the Employee Tracker, have a great day.");
           connection.end();
@@ -320,6 +325,16 @@ function deleteDepartment() {
   })
 }
 
+function viewDepartments(){
+  let departments = [];
+  connection.query("SELECT * FROM department", function (err, res) {
+    console.log("\n" + "All Departments" + "\n" + "-------------------------------")
+    res.forEach(department => console.log(department.name));
+    console.log("-------------------------------")
+  })
+}
+
+
 function addRole() {
   inquirer
     .prompt([
@@ -365,5 +380,21 @@ function deleteRole() {
         })
     })
   })
+}
 
+function viewRoles(){
+  connection.query("SELECT title, salary, name FROM role LEFT JOIN department ON role.department_id = department.id",
+  function (err, res) {
+    if (err) throw err;
+    let roleInfo = [];
+    for (i = 0; i < res.length; i++) {
+      roleInfo.push({
+        title: res[i].title,
+        salary: res[i].salary,
+        department: res[i].name
+      })
+    }
+    console.table(roleInfo);
+    init();
+  });
 }
