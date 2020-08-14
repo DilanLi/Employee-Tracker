@@ -23,7 +23,6 @@ connection.connect(function (err) {
 });
 
 
-let employees = [];
 let allEmployeeArray = [];
 allEmployeeInfoGenerator();
 
@@ -46,12 +45,14 @@ function allEmployeeInfoGenerator() {
       for (i = 0; i < res.length; i++) {
         allEmployeeArray.push(new AllEmployeeInfo(res[i].id, res[i].first_name, res[i].last_name, res[i].title, res[i].label, res[i].salary))
       }
-      allEmployeeArray.forEach(employee => employees.push(employee.first_name + " " + employee.last_name));
-      return allEmployeeArray, employees;
+      console.log("allEmployeeArray: " + allEmployeeArray);
+
     })
+
+    return allEmployeeArray;
+
 }
 
-console.log(allEmployeeArray);
 
 let employeeID;
 
@@ -73,7 +74,7 @@ function init() {
         type: "list",
         message: "Welcome to the employee Tracker, what would you like to do?",
         name: "startMenu",
-        choices: ["View All employees", "Add an employee", "Delete employee", "Update employee role", "Add Department", "Add Role", "Exit"]
+        choices: ["View All employees", "Add an employee", "Delete employee", "Update employee role", "Add Department", "Delete Department", "Add Role", "Delete Role", "Exit"]
       }
     ])
     .then(response => {
@@ -182,14 +183,19 @@ function createEmployeeinDatabase(response) {
 }
 
 function updateEmployeeRole() {
-  allEmployeeInfoGenerator();
-  inquirer
+  const employeesArray = [];
+  connection.query("SELECT * FROM employee", function (err, res) {
+    if (err) throw err;
+    for (i = 0; i < res.length; i++) {
+      employeesArray.push(res[i].first_name + " " + res[i].last_name);
+    }
+    inquirer
     .prompt([
       {
         type: "list",
         name: "selectedEmployee",
         message: "Which employee would you like to update role?",
-        choices: employees
+        choices: employeesArray
       },
       {
         type: "list",
@@ -198,60 +204,75 @@ function updateEmployeeRole() {
         choices: roles
       }
     ]).then(response => {
-      let selectedEmployee = allEmployeeArray.filter(function (employee) {
-        return employee.first_name + " " + employee.last_name === response.selectedEmployee;
-      });
-      employeeID = selectedEmployee[0].id
-
-      connection.query("SELECT * FROM role", function(err, res){
+      // console.log("all employee array: " + Array.isArray(allEmployeeArray));
+      connection.query("SELECT * FROM employee", function (err, res){
         if (err) throw err;
-        let newRoleID = res.filter(employee => response.newRole === employee.title)[0].label;
+        let selectedEmployee = res.filter(employee => response.selectedEmployee === employee.first_name + " " + employee.last_name);
+        employeeID = selectedEmployee[0].id;
 
-        //this query updates user selected employee's role into the new selected role
-        connection.query(
-          "UPDATE employee SET ? WHERE ?",
-          [
-            {
-              role_id: newRoleID
-            },
-            {
-              id: employeeID
-            }
-          ],
-          function (err, res) {
-            if (err) throw err;
-            console.log("  Employee role updated! \n");
-            init();
-          })  
+        connection.query("SELECT * FROM role", function (err, res) {
+          if (err) throw err;
+          let newRoleID = res.filter(employee => response.newRole === employee.title)[0].label;
+  
+          //this query updates user selected employee's role into the new selected role
+          connection.query(
+            "UPDATE employee SET ? WHERE ?",
+            [
+              {
+                role_id: newRoleID
+              },
+              {
+                id: employeeID
+              }
+            ],
+            function (err, res) {
+              if (err) throw err;
+              console.log("  Employee role updated! \n");
+              init();
+            })
+        })
       })
     })
+  });
+
 };
 
 function deleteEmployee() {
+
+  const employeesArray = [];
+  connection.query("SELECT * FROM employee", function (err, res) {
+    if (err) throw err;
+    for (i = 0; i < res.length; i++) {
+      employeesArray.push(res[i].first_name + " " + res[i].last_name);
+    }
+
+  //askes user which employee to delete
   inquirer
     .prompt([
       {
         type: "list",
         name: "selectedEmployee",
         message: "Which employee would you like to delete?",
-        choices: employees
+        choices: employeesArray
       }
     ]).then(response => {
-      for (i = 0; i < employees.length; i++) {
-        console.log("all employee array: " + allEmployeeArray);
+      for (i = 0; i < allEmployeeArray.length; i++) {
         if (allEmployeeArray[i].first_name + " " + allEmployeeArray[i].last_name === response.selectedEmployee) {
           employeeID = allEmployeeArray[i].id;
         }
+        console.log(employeeID);
+        connection.query(
+          "DELETE FROM employee WHERE id = ?", employeeID,
+          function (err, res) {
+            if (err) throw err;
+            console.log("  Employee deleted!");
+            init();
+          })
       }
-      connection.query(
-        "DELETE FROM employee WHERE id = ?", employeeID,
-        function (err, res) {
-          if (err) throw err;
-          console.log("  Employee deleted!");
-          init();
-        })
     })
+  })
 }
+
 
 function addDepartment() {
   inquirer
@@ -275,28 +296,28 @@ function addDepartment() {
 }
 
 function deleteDepartment() {
-  //   inquirer
-  //   .prompt([
-  //     {
-  //       type: "list",
-  //       name: "selectedDepartment",
-  //       message: "Which department would you like to delete?",
-  //       choices: 
-  //     }
-  //   ]).then(response => {
-  //     for (i = 0; i < res.length; i++) {
-  //       if (employeeNameArray[0] === res[i].first_name && employeeNameArray[1] === res[i].last_name) {
-  //         employeeID = res[i].id;
-  //       }
-  //   }
-  //     connection.query(
-  //       "DELETE FROM employee WHERE id = ?", employeeID,
-  //       function (err, res) {
-  //         if (err) throw err;
-  //         init();
-  //   })
-  // })
-
+  let departments = [];
+  connection.query("SELECT * FROM department", function (err, res) {
+    res.forEach(department => departments.push(department.name));
+    //askes the user for which department to delete
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "selectedDepartment",
+          message: "Which department would you like to delete?",
+          choices: departments
+        }
+      ]).then(response => {
+        //goes into the database and deletes the user-selected department
+        connection.query(
+          "DELETE FROM department WHERE name = ?", response.selectedDepartment,
+          function (err, res) {
+            if (err) throw err;
+            init();
+          })
+      })
+  })
 }
 
 function addRole() {
@@ -321,5 +342,28 @@ function addRole() {
 }
 
 function deleteRole() {
+  let roles = [];
+  connection.query("SELECT * FROM role", function (err, res) {
+    res.forEach(role => roles.push(role.title));
+
+  //askes the user for which Role to delete
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        name: "selectedRole",
+        message: "Which role would you like to delete?",
+        choices: roles
+      }
+    ]).then(response => {
+      //goes into the database and deletes the user-selected role
+      connection.query(
+        "DELETE FROM role WHERE title = ?", response.selectedRole,
+        function (err, res) {
+          if (err) throw err;
+          init();
+        })
+    })
+  })
 
 }
