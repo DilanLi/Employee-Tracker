@@ -8,5 +8,5 @@ INSERT INTO role (title) values ("Accountant");
 INSERT INTO role (title) values ("Legal Team Lead");
 INSERT INTO role (title) values ("Lawyer");
 
-
-
+INSERT INTO employee (first_name, last_name) values ("Dilan","Li");
+INSERT INTO employee (first_name, last_name) values ("Vivi","Lin")

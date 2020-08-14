@@ -23,48 +23,46 @@ connection.connect(function (err) {
 });
 
 
+let employees = [];
+let allEmployeeArray = [];
+allEmployeeInfoGenerator();
+
+function allEmployeeInfoGenerator() {
+  connection.query("SELECT id, first_name, last_name, title, salary, label FROM employee LEFT JOIN role ON employee.role_id = role.label",
+    function (err, res) {
+      if (err) throw err;
+
+      class AllEmployeeInfo {
+        constructor(id, first_name, last_name, title, role_id, salary) {
+          this.id = id;
+          this.first_name = first_name;
+          this.last_name = last_name;
+          this.title = title;
+          this.role_id = role_id;
+          this.salary = salary
+        }
+      }
+
+      for (i = 0; i < res.length; i++) {
+        allEmployeeArray.push(new AllEmployeeInfo(res[i].id, res[i].first_name, res[i].last_name, res[i].title, res[i].label, res[i].salary))
+      }
+      allEmployeeArray.forEach(employee => employees.push(employee.first_name + " " + employee.last_name));
+      return allEmployeeArray, employees;
+    })
+}
+
+console.log(allEmployeeArray);
+
 let employeeID;
 
 //all roles are retrieved from the database, and then stored to the roles array
 const roles = [];
 connection.query("SELECT title FROM role", function (err, res) {
   if (err) throw err;
-  // console.log(res)
   for (i = 0; i < res.length; i++) {
     roles.push(res[i].title);
   }
 });
-
-const employees = [];
-connection.query("SELECT first_name, last_name FROM employee", function (err, res) {
-  if (err) throw err;
-  // console.log(res)
-  for (i = 0; i < res.length; i++) {
-    employees.push(res[i].first_name + " " + res[i].last_name);
-  }
-});
-
-//Here I use a class constructor to matach all role titles with their IDs
-let roleAndIDArray = [];
-connection.query("SELECT * FROM role", function (err, res) {
-  // console.log(res);
-  if (err) throw err;
-  class RoleAndID {
-    constructor(role, id) {
-      this.role = role;
-      this.id = id;
-    };
-  }
-  for (i = 0; i < res.length; i++) {
-    roleAndIDArray.push(JSON.stringify(new RoleAndID(res[i].title, res[i].id)))
-  }
-  // console.log("Array: " + roleAndIDArray);
-  // console.log(Array.isArray(roleAndIDArray));
-  return roleAndIDArray;
-})
-
-console.log(roleAndIDArray)
-
 
 
 //this function asks what the user would like to do and initiates the other functions
@@ -75,7 +73,7 @@ function init() {
         type: "list",
         message: "Welcome to the employee Tracker, what would you like to do?",
         name: "startMenu",
-        choices: ["View All employees", "Add an employee", "Update employee role", "Add Department", "Add Role", "Exit"]
+        choices: ["View All employees", "Add an employee", "Delete employee", "Update employee role", "Add Department", "Add Role", "Exit"]
       }
     ])
     .then(response => {
@@ -112,24 +110,23 @@ function init() {
 }
 
 function displayEmployees() {
-  connection.query("SELECT * FROM employee", function (err, res) {
-    if (err) throw err;
-    // console.log(res);
-    let employeeInfo = [];
-    for (i = 0; i < res.length; i++) {
-      employeeInfo.push({
-        name: res[i].first_name + " " + res[i].last_name,
-        role: res[i].role,
-        manager: res[i].manager
-      })
-    }
-    console.table(employeeInfo);
-    init();
-  });
+  connection.query("SELECT first_name, last_name, title, salary FROM employee LEFT JOIN role ON employee.role_id = role.label",
+    function (err, res) {
+      if (err) throw err;
+      let employeeInfo = [];
+      for (i = 0; i < res.length; i++) {
+        employeeInfo.push({
+          name: res[i].first_name + " " + res[i].last_name,
+          title: res[i].title,
+          salary: res[i].salary
+        })
+      }
+      console.table(employeeInfo);
+      init();
+    });
 }
 
 function addEmployee() {
-  // console.log(roles)
   inquirer
     .prompt([
       {
@@ -162,10 +159,10 @@ function addEmployee() {
 function createEmployeeinDatabase(response) {
   let roleId;
   connection.query(
-    "SELECT id FROM role WHERE title = ?", response.role,
+    "SELECT label FROM role WHERE title = ?", response.role,
     function (err, res) {
       if (err) throw err;
-      roleId = res[0].id;
+      roleId = res[0].label;
       connection.query(
         "INSERT INTO employee SET ?",
         {
@@ -185,6 +182,7 @@ function createEmployeeinDatabase(response) {
 }
 
 function updateEmployeeRole() {
+  allEmployeeInfoGenerator();
   inquirer
     .prompt([
       {
@@ -200,24 +198,21 @@ function updateEmployeeRole() {
         choices: roles
       }
     ]).then(response => {
-      let employeeNameArray = response.selectedEmployee.split(" ");
-      connection.query("SELECT * FROM employee", function (err, res) {
-        for (i = 0; i < res.length; i++) {
-          if (employeeNameArray[0] === res[i].first_name && employeeNameArray[1] === res[i].last_name) {
-            employeeID = res[i].id;
-          }
-        }
-        let roleAndIdPairs = roleAndIDArray.filter(function(){
-          this.title === response.newRole;
-        })
-        console.log(roleAndIdPairs);
-        let roleID = roleAndIdPairs.id;
-        console.log(roleID);
+      let selectedEmployee = allEmployeeArray.filter(function (employee) {
+        return employee.first_name + " " + employee.last_name === response.selectedEmployee;
+      });
+      employeeID = selectedEmployee[0].id
+
+      connection.query("SELECT * FROM role", function(err, res){
+        if (err) throw err;
+        let newRoleID = res.filter(employee => response.newRole === employee.title)[0].label;
+
+        //this query updates user selected employee's role into the new selected role
         connection.query(
           "UPDATE employee SET ? WHERE ?",
           [
             {
-              role_id: roleID
+              role_id: newRoleID
             },
             {
               id: employeeID
@@ -227,34 +222,35 @@ function updateEmployeeRole() {
             if (err) throw err;
             console.log("  Employee role updated! \n");
             init();
-          })
+          })  
       })
-
-    });
-}
+    })
+};
 
 function deleteEmployee() {
   inquirer
     .prompt([
       {
         type: "list",
-        name: "employeeToBeDeleted",
+        name: "selectedEmployee",
         message: "Which employee would you like to delete?",
         choices: employees
       }
     ]).then(response => {
-      for (i = 0; i < res.length; i++) {
-        if (employeeNameArray[0] === res[i].first_name && employeeNameArray[1] === res[i].last_name) {
-          employeeID = res[i].id;
+      for (i = 0; i < employees.length; i++) {
+        console.log("all employee array: " + allEmployeeArray);
+        if (allEmployeeArray[i].first_name + " " + allEmployeeArray[i].last_name === response.selectedEmployee) {
+          employeeID = allEmployeeArray[i].id;
         }
-    }
+      }
       connection.query(
         "DELETE FROM employee WHERE id = ?", employeeID,
         function (err, res) {
           if (err) throw err;
+          console.log("  Employee deleted!");
           init();
+        })
     })
-})
 }
 
 function addDepartment() {
@@ -279,6 +275,27 @@ function addDepartment() {
 }
 
 function deleteDepartment() {
+  //   inquirer
+  //   .prompt([
+  //     {
+  //       type: "list",
+  //       name: "selectedDepartment",
+  //       message: "Which department would you like to delete?",
+  //       choices: 
+  //     }
+  //   ]).then(response => {
+  //     for (i = 0; i < res.length; i++) {
+  //       if (employeeNameArray[0] === res[i].first_name && employeeNameArray[1] === res[i].last_name) {
+  //         employeeID = res[i].id;
+  //       }
+  //   }
+  //     connection.query(
+  //       "DELETE FROM employee WHERE id = ?", employeeID,
+  //       function (err, res) {
+  //         if (err) throw err;
+  //         init();
+  //   })
+  // })
 
 }
 
