@@ -20,11 +20,10 @@ CREATE TABLE department (
 );
 
 CREATE TABLE role (
-  id INT NOT NULL AUTO_INCREMENT,
-  title_id INT NOT NULL AUTO_INCREMENT,
+  label INT NOT NULL AUTO_INCREMENT,
   title VARCHAR(30) NOT NULL,
   salary DECIMAL(10,2),
   department_id INT(10),
-  PRIMARY title_id (id)
+  PRIMARY KEY (label)
 );
 

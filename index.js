@@ -45,7 +45,6 @@ function allEmployeeInfoGenerator() {
       for (i = 0; i < res.length; i++) {
         allEmployeeArray.push(new AllEmployeeInfo(res[i].id, res[i].first_name, res[i].last_name, res[i].title, res[i].label, res[i].salary))
       }
-      console.log("allEmployeeArray: " + allEmployeeArray);
 
     })
 
@@ -110,13 +109,13 @@ function init() {
           viewRoles();
         case "Exit":
           console.log("Thank you for using the Employee Tracker, have a great day.");
-          connection.end();
+          connection.end()
       }
     });
 }
 
 function displayEmployees() {
-  connection.query("SELECT first_name, last_name, title, salary FROM employee LEFT JOIN role ON employee.role_id = role.label",
+  connection.query("SELECT first_name, last_name, title, salary, manager FROM employee LEFT JOIN role ON employee.role_id = role.label",
     function (err, res) {
       if (err) throw err;
       let employeeInfo = [];
@@ -124,7 +123,8 @@ function displayEmployees() {
         employeeInfo.push({
           name: res[i].first_name + " " + res[i].last_name,
           title: res[i].title,
-          salary: res[i].salary
+          salary: res[i].salary,
+          manager: res[i].manager
         })
       }
       console.table(employeeInfo);
@@ -261,22 +261,20 @@ function deleteEmployee() {
         choices: employeesArray
       }
     ]).then(response => {
-      for (i = 0; i < allEmployeeArray.length; i++) {
-        if (allEmployeeArray[i].first_name + " " + allEmployeeArray[i].last_name === response.selectedEmployee) {
-          employeeID = allEmployeeArray[i].id;
-        }
-        console.log(employeeID);
-        connection.query(
-          "DELETE FROM employee WHERE id = ?", employeeID,
-          function (err, res) {
-            if (err) throw err;
-            console.log("  Employee deleted!");
-            init();
+        connection.query("SELECT * FROM employee", function (err, res){
+          const selectedEmployee = res.filter(employee => response.selectedEmployee === employee.first_name + " " + employee.last_name);
+          employeeID = selectedEmployee[0].id
+          connection.query(
+            "DELETE FROM employee WHERE id = ?", [employeeID],
+            function (err, res) {
+              if (err) throw err;
+              console.log("  \n" + "Employee deleted!" + "\n");
+              init();
+            })
           })
-      }
+        }) 
     })
-  })
-}
+  }
 
 
 function addDepartment() {
@@ -326,11 +324,11 @@ function deleteDepartment() {
 }
 
 function viewDepartments(){
-  let departments = [];
   connection.query("SELECT * FROM department", function (err, res) {
     console.log("\n" + "All Departments" + "\n" + "-------------------------------")
     res.forEach(department => console.log(department.name));
-    console.log("-------------------------------")
+    console.log("-------------------------------" + "\n")
+    init();
   })
 }
 
@@ -342,15 +340,21 @@ function addRole() {
         type: "input",
         name: "new_role",
         message: "What role would you like to add?"
+      },
+      {
+        type: "input",
+        name: "salary",
+        message: "What is the salary of this role?"
       }
     ]).then(response => {
       connection.query("INSERT INTO role SET ?",
         {
-          title: response.new_role
+          title: response.new_role,
+          salary: response.salary
         },
         function (err, res) {
           if (err) throw err;
-          console.log(res.affectedRows + "  New role added! \n");
+          console.log("  New role added! \n");
           init();
         })
     })
@@ -359,6 +363,7 @@ function addRole() {
 function deleteRole() {
   let roles = [];
   connection.query("SELECT * FROM role", function (err, res) {
+    if (err) throw err;
     res.forEach(role => roles.push(role.title));
 
   //askes the user for which Role to delete
@@ -372,8 +377,8 @@ function deleteRole() {
       }
     ]).then(response => {
       //goes into the database and deletes the user-selected role
-      connection.query(
-        "DELETE FROM role WHERE title = ?", response.selectedRole,
+      connection.query( 
+        "DELETE FROM role WHERE title = ?", [response.selectedRole],
         function (err, res) {
           if (err) throw err;
           init();
@@ -383,7 +388,7 @@ function deleteRole() {
 }
 
 function viewRoles(){
-  connection.query("SELECT title, salary, name FROM role LEFT JOIN department ON role.department_id = department.id",
+  connection.query("SELECT * FROM role",
   function (err, res) {
     if (err) throw err;
     let roleInfo = [];
@@ -391,7 +396,6 @@ function viewRoles(){
       roleInfo.push({
         title: res[i].title,
         salary: res[i].salary,
-        department: res[i].name
       })
     }
     console.table(roleInfo);
