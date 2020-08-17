@@ -378,7 +378,10 @@ function deleteRole() {
     ]).then(response => {
       //goes into the database and deletes the user-selected role
       connection.query( 
-        "DELETE FROM role WHERE title = ?", [response.selectedRole],
+        "DELETE FROM role WHERE ?",
+        {
+          title: response.selectedRole
+        },
         function (err, res) {
           if (err) throw err;
           init();
@@ -399,6 +402,7 @@ function viewRoles(){
       })
     }
     console.table(roleInfo);
+    connection.end();
     init();
   });
 }
