@@ -52,17 +52,19 @@ function allEmployeeInfoGenerator() {
 
 }
 
-
 let employeeID;
 
 //all roles are retrieved from the database, and then stored to the roles array
 const roles = [];
-connection.query("SELECT title FROM role", function (err, res) {
-  if (err) throw err;
-  for (i = 0; i < res.length; i++) {
-    roles.push(res[i].title);
-  }
-});
+function getRolesList(cb){
+  connection.query("SELECT title FROM role", function (err, res) {
+    if (err) throw err;
+    for (i = 0; i < res.length; i++) {
+      roles.push(res[i].title);
+    }
+    cb(roles)
+  });  
+}
 
 
 //this function asks what the user would like to do and initiates the other functions
@@ -107,6 +109,7 @@ function init() {
           break;
         case "View All Roles":
           viewRoles();
+          break;
         case "Exit":
           console.log("Thank you for using the Employee Tracker, have a great day.");
           connection.end()
@@ -133,6 +136,7 @@ function displayEmployees() {
 }
 
 function addEmployee() {
+  getRolesList();
   inquirer
     .prompt([
       {
@@ -188,6 +192,7 @@ function createEmployeeinDatabase(response) {
 }
 
 function updateEmployeeRole() {
+  getRolesList();
   const employeesArray = [];
   connection.query("SELECT * FROM employee", function (err, res) {
     if (err) throw err;
@@ -243,7 +248,7 @@ function updateEmployeeRole() {
 };
 
 function deleteEmployee() {
-
+  //refresh employee names list in case an employee was just added
   const employeesArray = [];
   connection.query("SELECT * FROM employee", function (err, res) {
     if (err) throw err;
@@ -347,6 +352,7 @@ function addRole() {
         message: "What is the salary of this role?"
       }
     ]).then(response => {
+      console.log(response);
       connection.query("INSERT INTO role SET ?",
         {
           title: response.new_role,
@@ -361,19 +367,14 @@ function addRole() {
 }
 
 function deleteRole() {
-  let roles = [];
-  connection.query("SELECT * FROM role", function (err, res) {
-    if (err) throw err;
-    res.forEach(role => roles.push(role.title));
-
-  //askes the user for which Role to delete
-  inquirer
+  getRolesList( res => {
+    inquirer
     .prompt([
       {
         type: "list",
         name: "selectedRole",
         message: "Which role would you like to delete?",
-        choices: roles
+        choices: res
       }
     ]).then(response => {
       //goes into the database and deletes the user-selected role
@@ -388,12 +389,42 @@ function deleteRole() {
         })
     })
   })
+  // let rolesList = [];
+  // connection.query("SELECT title FROM role", function (err, res) {
+  //   if (err) throw err;
+  //   for (i = 0; i < res.length; i++) {
+  //     rolesList.push(res[i].title);
+  //   }
+    // inquirer
+    // .prompt([
+    //   {
+    //     type: "list",
+    //     name: "selectedRole",
+    //     message: "Which role would you like to delete?",
+    //     choices: rolesList
+    //   }
+    // ]).then(response => {
+    //   //goes into the database and deletes the user-selected role
+    //   connection.query( 
+    //     "DELETE FROM role WHERE ?",
+    //     {
+    //       title: response.selectedRole
+    //     },
+    //     function (err, res) {
+    //       if (err) throw err;
+    //       init();
+    //     })
+    // })
+  // });  
+
+  //askes the user for which Role to delete
 }
 
 function viewRoles(){
   connection.query("SELECT * FROM role",
   function (err, res) {
     if (err) throw err;
+    console.log(res);
     let roleInfo = [];
     for (i = 0; i < res.length; i++) {
       roleInfo.push({
@@ -402,7 +433,6 @@ function viewRoles(){
       })
     }
     console.table(roleInfo);
-    connection.end();
     init();
   });
 }
