@@ -55,8 +55,8 @@ function allEmployeeInfoGenerator() {
 let employeeID;
 
 //all roles are retrieved from the database, and then stored to the roles array
-const roles = [];
 function getRolesList(cb){
+  const roles = [];
   connection.query("SELECT title FROM role", function (err, res) {
     if (err) throw err;
     for (i = 0; i < res.length; i++) {
@@ -136,8 +136,8 @@ function displayEmployees() {
 }
 
 function addEmployee() {
-  getRolesList();
-  inquirer
+  getRolesList( res => {
+    inquirer
     .prompt([
       {
         type: "input",
@@ -154,7 +154,7 @@ function addEmployee() {
         name: "role",
         message: "What is the Employee's role?",
         //roles are retrieved from the roles array
-        choices: roles
+        choices: res
       },
       {
         type: "input",
@@ -164,6 +164,7 @@ function addEmployee() {
     ]).then(response => {
       createEmployeeinDatabase(response);
     });
+  });
 }
 
 function createEmployeeinDatabase(response) {
@@ -192,59 +193,59 @@ function createEmployeeinDatabase(response) {
 }
 
 function updateEmployeeRole() {
-  getRolesList();
   const employeesArray = [];
   connection.query("SELECT * FROM employee", function (err, res) {
     if (err) throw err;
     for (i = 0; i < res.length; i++) {
       employeesArray.push(res[i].first_name + " " + res[i].last_name);
     }
-    inquirer
-    .prompt([
-      {
-        type: "list",
-        name: "selectedEmployee",
-        message: "Which employee would you like to update role?",
-        choices: employeesArray
-      },
-      {
-        type: "list",
-        name: "newRole",
-        message: "What is the new role for this employee?",
-        choices: roles
-      }
-    ]).then(response => {
-      // console.log("all employee array: " + Array.isArray(allEmployeeArray));
-      connection.query("SELECT * FROM employee", function (err, res){
-        if (err) throw err;
-        let selectedEmployee = res.filter(employee => response.selectedEmployee === employee.first_name + " " + employee.last_name);
-        employeeID = selectedEmployee[0].id;
-
-        connection.query("SELECT * FROM role", function (err, res) {
+  getRolesList( res => {
+      inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "selectedEmployee",
+          message: "Which employee would you like to update role?",
+          choices: employeesArray
+        },
+        {
+          type: "list",
+          name: "newRole",
+          message: "What is the new role for this employee?",
+          choices: res
+        }
+      ]).then(response => {
+        // console.log("all employee array: " + Array.isArray(allEmployeeArray));
+        connection.query("SELECT * FROM employee", function (err, res){
           if (err) throw err;
-          let newRoleID = res.filter(employee => response.newRole === employee.title)[0].label;
+          let selectedEmployee = res.filter(employee => response.selectedEmployee === employee.first_name + " " + employee.last_name);
+          employeeID = selectedEmployee[0].id;
   
-          //this query updates user selected employee's role into the new selected role
-          connection.query(
-            "UPDATE employee SET ? WHERE ?",
-            [
-              {
-                role_id: newRoleID
-              },
-              {
-                id: employeeID
-              }
-            ],
-            function (err, res) {
-              if (err) throw err;
-              console.log("  Employee role updated! \n");
-              init();
-            })
+          connection.query("SELECT * FROM role", function (err, res) {
+            if (err) throw err;
+            let newRoleID = res.filter(employee => response.newRole === employee.title)[0].label;
+    
+            //this query updates user selected employee's role into the new selected role
+            connection.query(
+              "UPDATE employee SET ? WHERE ?",
+              [
+                {
+                  role_id: newRoleID
+                },
+                {
+                  id: employeeID
+                }
+              ],
+              function (err, res) {
+                if (err) throw err;
+                console.log("  Employee role updated! \n");
+                init();
+              })
+          })
         })
       })
-    })
+    });  
   });
-
 };
 
 function deleteEmployee() {
@@ -322,6 +323,7 @@ function deleteDepartment() {
           "DELETE FROM department WHERE name = ?", response.selectedDepartment,
           function (err, res) {
             if (err) throw err;
+            console.log("\n" + "Department successfully deleted!" + "\n");
             init();
           })
       })
@@ -352,7 +354,6 @@ function addRole() {
         message: "What is the salary of this role?"
       }
     ]).then(response => {
-      console.log(response);
       connection.query("INSERT INTO role SET ?",
         {
           title: response.new_role,
@@ -385,39 +386,11 @@ function deleteRole() {
         },
         function (err, res) {
           if (err) throw err;
+          console.log("\n" + "Role deleted!" + "\n")
           init();
         })
     })
   })
-  // let rolesList = [];
-  // connection.query("SELECT title FROM role", function (err, res) {
-  //   if (err) throw err;
-  //   for (i = 0; i < res.length; i++) {
-  //     rolesList.push(res[i].title);
-  //   }
-    // inquirer
-    // .prompt([
-    //   {
-    //     type: "list",
-    //     name: "selectedRole",
-    //     message: "Which role would you like to delete?",
-    //     choices: rolesList
-    //   }
-    // ]).then(response => {
-    //   //goes into the database and deletes the user-selected role
-    //   connection.query( 
-    //     "DELETE FROM role WHERE ?",
-    //     {
-    //       title: response.selectedRole
-    //     },
-    //     function (err, res) {
-    //       if (err) throw err;
-    //       init();
-    //     })
-    // })
-  // });  
-
-  //askes the user for which Role to delete
 }
 
 function viewRoles(){
